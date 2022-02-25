@@ -73,6 +73,7 @@ pub struct Plot {
     allow_drag: bool,
     min_auto_bounds: PlotBounds,
     margin_fraction: Vec2,
+    reset_screen: bool,
 
     min_size: Vec2,
     width: Option<f32>,
@@ -101,6 +102,7 @@ impl Plot {
             allow_drag: true,
             min_auto_bounds: PlotBounds::NOTHING,
             margin_fraction: Vec2::splat(0.05),
+            reset_screen: false,
 
             min_size: Vec2::splat(64.0),
             width: None,
@@ -189,6 +191,12 @@ impl Plot {
     /// Whether to allow dragging in the plot to move the bounds. Default: `true`.
     pub fn allow_drag(mut self, on: bool) -> Self {
         self.allow_drag = on;
+        self
+    }
+
+    /// Reset the screen's bounds, same as double clicking.
+    pub fn reset_screen(mut self) -> Self {
+        self.reset_screen = true;
         self
     }
 
@@ -290,6 +298,7 @@ impl Plot {
             allow_zoom,
             allow_drag,
             min_auto_bounds,
+            reset_screen,
             margin_fraction,
             width,
             height,
@@ -352,9 +361,19 @@ impl Plot {
             memory = PlotMemory {
                 auto_bounds: !min_auto_bounds.is_valid(),
                 hovered_entry: None,
-                min_auto_bounds,
+                min_auto_bounds,                
                 ..memory
             };
+
+            if reset_screen {
+                memory.last_screen_transform = ScreenTransform::new(
+                    rect,
+                    min_auto_bounds,
+                    center_x_axis,
+                    center_y_axis,
+                );
+            }
+
             memory.clone().store(ui.ctx(), plot_id);
         }
 
@@ -417,7 +436,7 @@ impl Plot {
 
         // Allow double clicking to reset to automatic bounds.
         auto_bounds |= response.double_clicked_by(PointerButton::Primary);
-
+        
         // Set bounds automatically based on content.
         if auto_bounds || !bounds.is_valid() {
             bounds = min_auto_bounds;
